@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum CobrancaStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+  FAILED
+}
+
+model Cobranca {
+  id               String          @id @default(uuid())
+  empresaId        String
+  agendamentoId    String          @unique
+  clienteId        String
+  clienteNome      String
+  clienteTelefone  String
+  abacateId        String?         @unique
+  brCode           String?         @db.Text
+  brCodeBase64     String?         @db.LongText
+  amount           Int
+  paidAmount       Int?
+  status           CobrancaStatus  @default(PENDING)
+  externalId       String?         @unique
+  expiresAt        DateTime
+  paidAt           DateTime?
+  failureReason    String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  events           CobrancaEvent[]
+
+  @@index([empresaId, status])
+  @@index([empresaId, createdAt])
+}
+
+model CobrancaEvent {
+  id          String   @id @default(uuid())
+  cobrancaId  String
+  type        String
+  payload     Json
+  createdAt   DateTime @default(now())
+  cobranca    Cobranca @relation(fields: [cobrancaId], references: [id], onDelete: Cascade)
+
+  @@index([cobrancaId])
+}
+
+model WebhookEvent {
+  id             String   @id @default(uuid())
+  externalEventId String  @unique
+  type           String
+  payload        Json
+  processedAt    DateTime @default(now())
+
+  @@index([type, processedAt])
+}
